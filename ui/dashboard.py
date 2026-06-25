@@ -768,21 +768,26 @@ def _render_tasks_table(filtered_df: pd.DataFrame) -> None:
 
 
 def _render_insights_panel(fatigue_df: pd.DataFrame, kpis: dict[str, Any]) -> None:
-    """Render the auto-generated insights section."""
+    """Render the auto-generated insights section in 3 columns."""
     st.markdown('<div class="section-header">INSIGHTS AUTOMÁTICOS</div>',
                 unsafe_allow_html=True)
 
     insights = _generate_insights(fatigue_df, kpis)
+    if not insights:
+        return
 
-    for ins in insights:
-        border_color = ins.get("color", PALETTE["primary"])
-        st.markdown(f"""
-        <div class="insight-card" style="border-left-color:{border_color};">
-          <div class="insight-title">{ins["icon"]} {ins["title"]}</div>
-          <div class="insight-desc">{ins["description"]}</div>
-          <div class="insight-cat">{ins["category"]}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    cols = st.columns(3)
+    for i, ins in enumerate(insights):
+        col_idx = i % 3
+        with cols[col_idx]:
+            border_color = ins.get("color", PALETTE["primary"])
+            st.markdown(f"""
+            <div class="insight-card" style="border-left-color:{border_color}; min-height: 120px;">
+              <div class="insight-title">{ins["icon"]} {ins["title"]}</div>
+              <div class="insight-desc">{ins["description"]}</div>
+              <div class="insight-cat">{ins["category"]}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 def _generate_insights(
@@ -941,10 +946,11 @@ def render_dashboard() -> None:
     st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
                 unsafe_allow_html=True)
 
-    # Insights + task table in two-column layout
-    col_main, col_side = st.columns([3, 1])
-    with col_main:
-        _render_tasks_table(filtered_df)
-    with col_side:
-        fatigue_df = detect_fatigue_patterns(filtered_df)
-        _render_insights_panel(fatigue_df, kpis)
+    # Tabla de tareas a pantalla completa
+    _render_tasks_table(filtered_df)
+    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
+                unsafe_allow_html=True)
+
+    # Panel de insights debajo de la tabla
+    fatigue_df = detect_fatigue_patterns(filtered_df)
+    _render_insights_panel(fatigue_df, kpis)
