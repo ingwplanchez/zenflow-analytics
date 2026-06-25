@@ -265,7 +265,8 @@ def _chart_weekday_efficiency(weekday_df: pd.DataFrame) -> go.Figure:
                    gridcolor="rgba(60,73,71,0.3)"),
         yaxis2=dict(title="Throughput (t/h)", overlaying="y", side="right",
                     showgrid=False, tickfont=dict(color=PALETTE["secondary"])),
-        legend=dict(orientation="h", y=1.08),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
+        margin=dict(t=70),
         bargap=0.25,
     )
     return fig
@@ -397,7 +398,8 @@ def _chart_fatigue(fatigue_df: pd.DataFrame) -> go.Figure:
         yaxis=dict(title="Eficiencia (%)", ticksuffix="%",
                    gridcolor="rgba(60,73,71,0.3)"),
         xaxis=dict(title="Fecha"),
-        legend=dict(orientation="h", y=1.08),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
+        margin=dict(t=70),
         height=420,
     )
     return fig
