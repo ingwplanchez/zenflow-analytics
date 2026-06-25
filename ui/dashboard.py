@@ -259,14 +259,12 @@ def _chart_weekday_efficiency(weekday_df: pd.DataFrame) -> go.Figure:
 
     apply_plotly_theme(fig)
     fig.update_layout(
-        title=dict(text="Distribución de Eficiencia & Throughput por Día", x=0.0,
-                   font=dict(size=14, color=PALETTE["text"])),
         yaxis=dict(title="Eficiencia (%)", ticksuffix="%",
                    gridcolor="rgba(60,73,71,0.3)"),
         yaxis2=dict(title="Throughput (t/h)", overlaying="y", side="right",
                     showgrid=False, tickfont=dict(color=PALETTE["secondary"])),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
-        margin=dict(t=70),
+        margin=dict(t=30, b=40),
         bargap=0.25,
     )
     return fig
@@ -297,11 +295,10 @@ def _chart_heatmap(pivot: pd.DataFrame) -> go.Figure:
     ))
     apply_plotly_theme(fig)
     fig.update_layout(
-        title=dict(text="Mapa de Calor de Actividad (Hora × Día)", x=0.0,
-                   font=dict(size=14, color=PALETTE["text"])),
         yaxis=dict(autorange="reversed", tickfont=dict(
             family="JetBrains Mono, monospace", size=10
         )),
+        margin=dict(t=30, b=40),
         height=540,
     )
     return fig
@@ -393,13 +390,11 @@ def _chart_fatigue(fatigue_df: pd.DataFrame) -> go.Figure:
 
     apply_plotly_theme(fig)
     fig.update_layout(
-        title=dict(text="Patrones de Fatiga & Cuellos de Botella", x=0.0,
-                   font=dict(size=14, color=PALETTE["text"])),
         yaxis=dict(title="Eficiencia (%)", ticksuffix="%",
                    gridcolor="rgba(60,73,71,0.3)"),
         xaxis=dict(title="Fecha"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
-        margin=dict(t=70),
+        margin=dict(t=30, b=40),
         height=420,
     )
     return fig
@@ -658,6 +653,7 @@ def _render_analytics_tabs(filtered_df: pd.DataFrame) -> None:
 
     with tab1:
         weekday_df = aggregate_by_weekday(filtered_df)
+        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Distribución de Eficiencia & Throughput por Día</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_weekday_efficiency(weekday_df),
             use_container_width=True,
@@ -678,6 +674,7 @@ def _render_analytics_tabs(filtered_df: pd.DataFrame) -> None:
 
     with tab2:
         pivot = build_hourly_heatmap(filtered_df)
+        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Mapa de Calor de Actividad (Hora × Día)</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_heatmap(pivot),
             use_container_width=True,
@@ -690,6 +687,7 @@ def _render_analytics_tabs(filtered_df: pd.DataFrame) -> None:
 
     with tab3:
         fatigue_df = detect_fatigue_patterns(filtered_df)
+        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Patrones de Fatiga & Cuellos de Botella</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_fatigue(fatigue_df),
             use_container_width=True,
