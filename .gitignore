@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Streamlit local configurations
+.streamlit/secrets.toml
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Data files (keep the data folder structure but ignore the actual CSV if needed, or keep it. Let's allow sample_logs.csv as it's small)
+# data/sample_logs.csv
+
+# System / OS
+Thumbs.db
+.DS_Store

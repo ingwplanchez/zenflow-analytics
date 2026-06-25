@@ -1,0 +1,14 @@
+# ZenFlow Analytics — Streamlit Theme Configuration
+# Tokens mapped 1:1 from DESIGN.md color palette
+
+[theme]
+base = "dark"
+primaryColor        = "#4fdbc8"   # Primary Teal — throughput, active states, CTAs
+backgroundColor     = "#0b1326"   # Deep Slate — canvas level 0
+secondaryBackgroundColor = "#131b2e"   # Surface Container Low — cards, sidebar
+textColor           = "#dae2fd"   # On-Surface — primary readable text
+font                = "sans serif"
+
+[server]
+headless            = true
+enableCORS          = false

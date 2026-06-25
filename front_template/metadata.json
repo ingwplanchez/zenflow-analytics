@@ -1,0 +1,6 @@
+{
+  "name": "ZenFlow Analytics",
+  "description": "Plataforma de inteligencia productiva con analíticas avanzadas, gestión de proyectos, seguimiento de tareas y reportes ejecutivos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
