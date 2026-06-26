@@ -69,7 +69,7 @@ CATEGORY_LABELS: dict[str, str] = {
 PLOTLY_THEME: dict[str, Any] = {
     "layout": {
         "paper_bgcolor":   PALETTE["background"],
-        "plot_bgcolor":    PALETTE["surface_low"],
+        "plot_bgcolor":    PALETTE["background"],
         "font": {
             "family": "Inter, JetBrains Mono, monospace",
             "color":  PALETTE["text"],
@@ -112,7 +112,7 @@ PLOTLY_THEME: dict[str, Any] = {
 
 # Heatmap colorscale: slate → teal
 HEATMAP_COLORSCALE: list[list] = [
-    [0.0,  PALETTE["surface_low"]],
+    [0.0,  "#1e293b"],   # Distinct slate gray for 0 tasks
     [0.25, "#0e3a35"],
     [0.5,  "#155e56"],
     [0.75, "#1f9e8a"],

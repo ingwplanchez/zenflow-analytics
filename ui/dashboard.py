@@ -322,7 +322,7 @@ def _chart_heatmap(pivot: pd.DataFrame) -> go.Figure:
         hovertemplate=(
             "<b>%{y} — %{x}</b><br>Tareas: %{z}<extra></extra>"
         ),
-        xgap=2,
+        xgap=3,
         ygap=3,
     ))
     apply_plotly_theme(fig)
