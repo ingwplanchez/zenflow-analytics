@@ -451,3 +451,79 @@ def apply_filters(
         mask &= df["status"].isin(statuses)
 
     return df.loc[mask]
+
+
+# ─── 8. Métricas Simplificadas del Canvas ─────────────────────────────────────
+
+
+def compute_daily_throughput(df: pd.DataFrame) -> float:
+    """Calculate the average number of completed tasks per active day.
+
+    Args:
+        df: Enriched DataFrame.
+
+    Returns:
+        Average completed tasks per active day (float).
+    """
+    completed_df = df[df["status"] == "completed"]
+    if completed_df.empty:
+        return 0.0
+    active_days = completed_df["date"].nunique()
+    if active_days == 0:
+        return 0.0
+    return float(len(completed_df) / active_days)
+
+
+def compute_optimal_window(df: pd.DataFrame) -> str:
+    """Find the 2-hour window with the highest density of completed tasks.
+
+    Args:
+        df: Enriched DataFrame.
+
+    Returns:
+        String representing the optimal hours window e.g., "10:00 - 12:00".
+    """
+    completed_df = df[df["status"] == "completed"]
+    if completed_df.empty:
+        return "N/A"
+
+    hourly_counts = completed_df["hour"].value_counts().reindex(range(24), fill_value=0)
+
+    max_sum = -1
+    best_start = 9
+    for h in range(23):
+        current_sum = hourly_counts[h] + hourly_counts[h+1]
+        if current_sum > max_sum:
+            max_sum = current_sum
+            best_start = h
+
+    return f"{best_start:02d}:00 - {best_start+2:02d}:00"
+
+
+def compute_current_streak(df: pd.DataFrame) -> int:
+    """Calculate the current consecutive days streak of completed tasks.
+
+    Calculates backwards from the most recent active date with a completed task.
+
+    Args:
+        df: Enriched DataFrame.
+
+    Returns:
+        Streak count in days (int).
+    """
+    completed_df = df[df["status"] == "completed"]
+    if completed_df.empty:
+        return 0
+
+    active_dates = sorted(completed_df["date"].unique())
+    if not active_dates:
+        return 0
+
+    streak = 1
+    for i in range(len(active_dates) - 1, 0, -1):
+        diff = (active_dates[i] - active_dates[i-1]).days
+        if diff == 1:
+            streak += 1
+        elif diff > 1:
+            break
+    return streak

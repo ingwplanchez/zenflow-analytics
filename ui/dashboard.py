@@ -42,6 +42,9 @@ from core.data_processor import (
     detect_fatigue_patterns,
     enrich_features,
     load_and_validate,
+    compute_daily_throughput,
+    compute_optimal_window,
+    compute_current_streak,
 )
 from utils.helpers import (
     CATEGORY_LABELS,
@@ -266,16 +269,20 @@ def _chart_weekday_efficiency(weekday_df: pd.DataFrame) -> go.Figure:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
         margin=dict(t=30, b=40),
         bargap=0.25,
+        height=325,
     )
     return fig
 
 
 def _chart_heatmap(pivot: pd.DataFrame) -> go.Figure:
-    """Activity density heatmap: 24h × 7 days."""
+    """Activity density heatmap: 7 days (Y) × 24h (X) — horizontal layout."""
+    # Transpose: rows = days (weekday labels), columns = hours (0-23)
+    pivot_t = pivot.T  # shape: (7 days) × (24 hours)
+
     fig = go.Figure(go.Heatmap(
-        z=pivot.values,
-        x=pivot.columns.tolist(),
-        y=[f"{h:02d}:00" for h in pivot.index],
+        z=pivot_t.values,
+        x=[f"{h:02d}:00" for h in range(24)],   # Horas en el eje X
+        y=pivot_t.index.tolist(),                 # Días en el eje Y
         colorscale=HEATMAP_COLORSCALE,
         showscale=True,
         colorbar=dict(
@@ -284,22 +291,29 @@ def _chart_heatmap(pivot: pd.DataFrame) -> go.Figure:
                 font=dict(color=PALETTE["text_dim"], size=11),
             ),
             tickfont=dict(color=PALETTE["text_dim"]),
+            thickness=12,
             bgcolor=PALETTE["surface_low"],
             bordercolor=PALETTE["outline_variant"],
         ),
         hovertemplate=(
-            "<b>%{x} — %{y}</b><br>Tareas: %{z}<extra></extra>"
+            "<b>%{y} — %{x}</b><br>Tareas: %{z}<extra></extra>"
         ),
         xgap=2,
-        ygap=1,
+        ygap=3,
     ))
     apply_plotly_theme(fig)
     fig.update_layout(
-        yaxis=dict(autorange="reversed", tickfont=dict(
-            family="JetBrains Mono, monospace", size=10
-        )),
-        margin=dict(t=30, b=40),
-        height=540,
+        xaxis=dict(
+            title="Hora del día",
+            tickfont=dict(family="JetBrains Mono, monospace", size=10),
+            tickangle=-45,
+        ),
+        yaxis=dict(
+            autorange="reversed",
+            tickfont=dict(family="JetBrains Mono, monospace", size=11),
+        ),
+        margin=dict(t=30, b=60, l=60, r=20),
+        height=380,
     )
     return fig
 
@@ -582,126 +596,85 @@ def _render_sidebar(df: pd.DataFrame) -> FilterState:
     )
 
 
-def _render_kpi_header(kpis: dict[str, Any], prev_kpis: dict[str, Any] | None = None) -> None:
-    """Render the 4 top KPI metric cards."""
-    st.markdown('<div class="section-header">MÉTRICAS CLAVE</div>',
+def _render_kpi_header(df: pd.DataFrame) -> None:
+    """Render the 3 top KPI metric cards for the Executive Summary."""
+    st.markdown('<div class="section-header">RESUMEN EJECUTIVO</div>',
                 unsafe_allow_html=True)
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
 
-    eff_pct   = kpis["avg_efficiency"] * 100
-    vel_pct   = kpis["avg_velocity"]  * 100
-    fat_pct   = kpis["fatigue_index"] * 100
-    comp_pct  = kpis["completion_rate"] * 100
+    throughput = compute_daily_throughput(df)
+    optimal_window = compute_optimal_window(df)
+    streak = compute_current_streak(df)
 
     with c1:
         st.metric(
-            label="⚡ Eficiencia Global",
-            value=f"{eff_pct:.1f}%",
-            delta=f"{eff_pct - 100:.1f}pp vs. estimado",
-            delta_color="normal",
+            label="📊 Throughput Diario",
+            value=f"{throughput:.1f} tareas/día",
+            delta="Promedio completado por día activo",
+            delta_color="off",
         )
     with c2:
         st.metric(
-            label="🚀 Velocidad Promedio",
-            value=f"{vel_pct:.1f}%",
-            delta="↑ throughput relativo",
+            label="🌡️ Ventana Óptima",
+            value=optimal_window,
+            delta="Rango de máxima productividad",
             delta_color="off",
         )
     with c3:
         st.metric(
-            label="✅ Tasa Completado",
-            value=f"{comp_pct:.1f}%",
-            delta=f"{kpis['completed_tasks']} / {kpis['total_tasks']} tareas",
+            label="⚡ Racha Actual",
+            value=f"{streak} días",
+            delta="Días consecutivos de actividad",
             delta_color="off",
         )
-    with c4:
-        fi_delta_color = "inverse" if fat_pct > 35 else "normal"
-        st.metric(
-            label="🧠 Índice de Fatiga",
-            value=f"{fat_pct:.1f}%",
-            delta="↑ riesgo" if fat_pct > 35 else "↓ bajo control",
-            delta_color=fi_delta_color,
-        )
-
-    # Secondary row
-    st.markdown("<br>", unsafe_allow_html=True)
-    s1, s2, s3, s4 = st.columns(4)
-    with s1:
-        st.metric("⏱ Horas Reales Totales", fmt_hours(kpis["total_real_hours"], 0))
-    with s2:
-        st.metric("📋 Horas Estimadas Totales", fmt_hours(kpis["total_est_hours"], 0))
-    with s3:
-        overrun_pct = kpis["overrun_rate"] * 100
-        st.metric("📈 Tasa de Sobreestimación", f"{overrun_pct:.1f}%")
-    with s4:
-        delta_hours = kpis["total_real_hours"] - kpis["total_est_hours"]
-        sign = "+" if delta_hours >= 0 else ""
-        st.metric("Δ Horas (Real − Est)", f"{sign}{delta_hours:.0f}h")
 
 
-def _render_analytics_tabs(filtered_df: pd.DataFrame) -> None:
-    """Render the 3 analytical tabs."""
-    st.markdown('<div class="section-header">ANÁLISIS AVANZADO</div>',
+def _render_temporal_analysis(filtered_df: pd.DataFrame) -> None:
+    """Render the temporal analysis section (bicolumn: efficiency bars + heatmap)."""
+    st.markdown('<div class="section-header">ANÁLISIS TEMPORAL</div>',
                 unsafe_allow_html=True)
 
-    tab1, tab2, tab3 = st.tabs([
-        "📊  Eficiencia por Día",
-        "🌡️  Mapa de Calor de Actividad",
-        "⚠️  Patrones de Fatiga",
-    ])
+    col_left, col_right = st.columns(2)
 
-    with tab1:
+    with col_left:
         weekday_df = aggregate_by_weekday(filtered_df)
         st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Distribución de Eficiencia & Throughput por Día</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_weekday_efficiency(weekday_df),
-            use_container_width=True,
+            width='stretch',
         )
 
-        # Summary table below chart
-        display_df = weekday_df[
-            ["weekday", "task_count", "avg_eff", "total_hours", "throughput", "completion_r"]
-        ].copy()
-        display_df.columns = [
-            "Día", "Tareas", "Efic. Media", "Horas Reales", "Throughput", "Compl. Rate"
-        ]
-        display_df["Efic. Media"]  = (display_df["Efic. Media"] * 100).round(1).astype(str) + "%"
-        display_df["Compl. Rate"]  = (display_df["Compl. Rate"] * 100).round(1).astype(str) + "%"
-        display_df["Horas Reales"] = display_df["Horas Reales"].round(1).astype(str) + "h"
-        display_df["Throughput"]   = display_df["Throughput"].round(2).astype(str) + " t/h"
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-    with tab2:
+    with col_right:
         pivot = build_hourly_heatmap(filtered_df)
         st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Mapa de Calor de Actividad (Hora × Día)</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_heatmap(pivot),
-            use_container_width=True,
-        )
-        st.markdown(
-            '<p style="font-size:12px;color:#859490;">Cada celda representa el número de '
-            'tareas iniciadas en esa combinación de hora × día de semana.</p>',
-            unsafe_allow_html=True,
+            width='stretch',
         )
 
-    with tab3:
-        fatigue_df = detect_fatigue_patterns(filtered_df)
-        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Patrones de Fatiga & Cuellos de Botella</div>', unsafe_allow_html=True)
-        st.plotly_chart(
-            _chart_fatigue(fatigue_df),
-            use_container_width=True,
-        )
 
-        # Fatigue summary stats
-        n_fatigue     = int(fatigue_df["is_fatigue"].sum())
-        n_bottleneck  = int(fatigue_df["is_bottleneck"].sum())
-        pct_fatigue   = n_fatigue / len(fatigue_df) * 100 if len(fatigue_df) > 0 else 0
+def _render_fatigue_trends(filtered_df: pd.DataFrame) -> None:
+    """Render the fatigue and anomaly trends section (full-width)."""
+    st.markdown('<div class="section-header">TENDENCIAS E INSIGHTS DE FATIGA</div>',
+                unsafe_allow_html=True)
 
-        fc1, fc2, fc3 = st.columns(3)
-        fc1.metric("Eventos de Fatiga", n_fatigue, f"{pct_fatigue:.1f}% del total")
-        fc2.metric("Cuellos de Botella", n_bottleneck)
-        fc3.metric("Peor Día", _get_worst_fatigue_day(fatigue_df))
+    fatigue_df = detect_fatigue_patterns(filtered_df)
+    st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Patrones de Fatiga & Cuellos de Botella</div>', unsafe_allow_html=True)
+    st.plotly_chart(
+        _chart_fatigue(fatigue_df),
+        width='stretch',
+    )
+
+    # Fatigue summary stats in columns below the chart
+    n_fatigue     = int(fatigue_df["is_fatigue"].sum())
+    n_bottleneck  = int(fatigue_df["is_bottleneck"].sum())
+    pct_fatigue   = n_fatigue / len(fatigue_df) * 100 if len(fatigue_df) > 0 else 0
+
+    fc1, fc2, fc3 = st.columns(3)
+    fc1.metric("Eventos de Fatiga", n_fatigue, f"{pct_fatigue:.1f}% del total")
+    fc2.metric("Cuellos de Botella", n_bottleneck)
+    fc3.metric("Peor Día", _get_worst_fatigue_day(fatigue_df))
 
 
 def _get_worst_fatigue_day(fatigue_df: pd.DataFrame) -> str:
@@ -724,9 +697,9 @@ def _render_breakdown_charts(filtered_df: pd.DataFrame) -> None:
                 unsafe_allow_html=True)
     col_l, col_r = st.columns(2)
     with col_l:
-        st.plotly_chart(_chart_category_breakdown(filtered_df), use_container_width=True)
+        st.plotly_chart(_chart_category_breakdown(filtered_df), width='stretch')
     with col_r:
-        st.plotly_chart(_chart_project_velocity(filtered_df), use_container_width=True)
+        st.plotly_chart(_chart_project_velocity(filtered_df), width='stretch')
 
 
 def _render_tasks_table(filtered_df: pd.DataFrame) -> None:
@@ -750,7 +723,7 @@ def _render_tasks_table(filtered_df: pd.DataFrame) -> None:
 
     st.dataframe(
         display,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config={
             "Efic. (%)": st.column_config.ProgressColumn(
@@ -934,11 +907,11 @@ def render_dashboard() -> None:
     kpis = compute_kpis(filtered_df)
 
     # ── Render sections ───────────────────────────────────────────────────────
-    _render_kpi_header(kpis)
+    _render_kpi_header(filtered_df)
     st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
                 unsafe_allow_html=True)
 
-    _render_analytics_tabs(filtered_df)
+    _render_temporal_analysis(filtered_df)
     st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
                 unsafe_allow_html=True)
 
@@ -946,11 +919,6 @@ def render_dashboard() -> None:
     st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
                 unsafe_allow_html=True)
 
-    # Tabla de tareas a pantalla completa
-    _render_tasks_table(filtered_df)
-    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
-                unsafe_allow_html=True)
-
-    # Panel de insights debajo de la tabla
+    # Panel de insights
     fatigue_df = detect_fatigue_patterns(filtered_df)
     _render_insights_panel(fatigue_df, kpis)
