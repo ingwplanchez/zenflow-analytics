@@ -46,6 +46,56 @@ FATIGUE_ZSCORE_THRESHOLD: float = 1.5
 # ─── 1. Ingesta y Validación ──────────────────────────────────────────────────
 
 
+def validate_and_clean_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Validate schema and coerce types on an already‑loaded DataFrame.
+
+    [Especificación]
+      Input:  Raw DataFrame from a CSV read.
+      Output: Cleaned, typed DataFrame (same contract as load_and_validate).
+
+    Raises:
+        ValueError: If required columns are missing.
+        RuntimeError: If the DataFrame is empty after cleaning.
+    """
+    # ── Schema guard ──────────────────────────────────────────────────────────
+    if not validate_csv_schema(df):
+        raise ValueError(
+            f"[ZenFlow] Missing required columns. Expected: {list(REQUIRED_SCHEMA.keys())}"
+        )
+
+    # ── Type coercions ────────────────────────────────────────────────────────
+    # Timestamp — ensure datetime64[ns], coerce bad rows to NaT then drop
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", utc=False)
+
+    # Numeric — coerce to float, clip negative values
+    df["est_hours"]  = pd.to_numeric(df["est_hours"],  errors="coerce").clip(lower=0.0)
+    df["real_hours"] = pd.to_numeric(df["real_hours"], errors="coerce").clip(lower=0.0)
+    df["difficulty"] = pd.to_numeric(df["difficulty"], errors="coerce").clip(1, 5).astype("Int64")
+
+    # Drop rows with critical nulls
+    critical_cols = ["timestamp", "task_id", "project", "category", "status"]
+    before = len(df)
+    df = df.dropna(subset=critical_cols).reset_index(drop=True)
+    dropped = before - len(df)
+    if dropped > 0:
+        warnings.warn(
+            f"[ZenFlow] Dropped {dropped} rows with null critical fields.",
+            stacklevel=2,
+        )
+
+    if df.empty:
+        raise RuntimeError("[ZenFlow] DataFrame is empty after cleaning. Check the source CSV.")
+
+    # Normalize string columns (lowercase, strip whitespace)
+    for col in ["category", "priority", "status"]:
+        df[col] = df[col].str.strip().str.lower()
+
+    # Final int cast for difficulty (after dropna)
+    df["difficulty"] = df["difficulty"].astype("int64")
+
+    return df
+
+
 def load_and_validate(path: str | Path) -> pd.DataFrame:
     """Load a development log CSV and validate/coerce its schema.
 
@@ -96,43 +146,7 @@ def load_and_validate(path: str | Path) -> pd.DataFrame:
     except Exception as exc:
         raise ValueError(f"[ZenFlow] Failed to parse CSV: {exc}") from exc
 
-    # ── Schema guard ──────────────────────────────────────────────────────────
-    if not validate_csv_schema(df):
-        raise ValueError(
-            f"[ZenFlow] Missing required columns. Expected: {list(REQUIRED_SCHEMA.keys())}"
-        )
-
-    # ── Type coercions ────────────────────────────────────────────────────────
-    # Timestamp — ensure datetime64[ns], coerce bad rows to NaT then drop
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", utc=False)
-
-    # Numeric — coerce to float, clip negative values
-    df["est_hours"]  = pd.to_numeric(df["est_hours"],  errors="coerce").clip(lower=0.0)
-    df["real_hours"] = pd.to_numeric(df["real_hours"], errors="coerce").clip(lower=0.0)
-    df["difficulty"] = pd.to_numeric(df["difficulty"], errors="coerce").clip(1, 5).astype("Int64")
-
-    # Drop rows with critical nulls
-    critical_cols = ["timestamp", "task_id", "project", "category", "status"]
-    before = len(df)
-    df = df.dropna(subset=critical_cols).reset_index(drop=True)
-    dropped = before - len(df)
-    if dropped > 0:
-        warnings.warn(
-            f"[ZenFlow] Dropped {dropped} rows with null critical fields.",
-            stacklevel=2,
-        )
-
-    if df.empty:
-        raise RuntimeError("[ZenFlow] DataFrame is empty after cleaning. Check the source CSV.")
-
-    # Normalize string columns (lowercase, strip whitespace)
-    for col in ["category", "priority", "status"]:
-        df[col] = df[col].str.strip().str.lower()
-
-    # Final int cast for difficulty (after dropna)
-    df["difficulty"] = df["difficulty"].astype("int64")
-
-    return df
+    return validate_and_clean_df(df)
 
 
 # ─── 2. Feature Engineering ───────────────────────────────────────────────────

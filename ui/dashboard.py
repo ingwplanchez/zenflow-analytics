@@ -24,6 +24,7 @@ ui/dashboard.py — ZenFlow Analytics
 
 from __future__ import annotations
 
+import io
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -42,6 +43,7 @@ from core.data_processor import (
     detect_fatigue_patterns,
     enrich_features,
     load_and_validate,
+    validate_and_clean_df,
     compute_daily_throughput,
     compute_optimal_window,
     compute_current_streak,
@@ -211,11 +213,33 @@ _CSS = """
 
 
 @st.cache_data(ttl=300)
-def _load_data(path: str) -> pd.DataFrame:
-    """Load and enrich the full dataset (cached 5 min)."""
+def _load_local_data(path: Path) -> pd.DataFrame:
+    """Load and enrich the local sample dataset (cached 5 min)."""
     df = load_and_validate(path)
     df = enrich_features(df)
     return df
+
+
+@st.cache_data(ttl=300)
+def _load_uploaded_data(file_bytes: bytes) -> pd.DataFrame:
+    """Load, validate and enrich an uploaded CSV (cached by bytes)."""
+    try:
+        df_raw = pd.read_csv(
+            io.BytesIO(file_bytes),
+            parse_dates=["timestamp"],
+            dtype={
+                "task_id":    "string",
+                "project":    "string",
+                "category":   "string",
+                "priority":   "string",
+                "status":     "string",
+            },
+        )
+        df = validate_and_clean_df(df_raw)
+        return enrich_features(df)
+    except Exception as exc:
+        # We raise the error to be caught in render_dashboard
+        raise exc
 
 
 # ─── Chart Builders ──────────────────────────────────────────────────────────
@@ -505,13 +529,6 @@ def _render_sidebar(df: pd.DataFrame) -> FilterState:
     """Render sidebar filters and return the selected FilterState."""
     with st.sidebar:
         st.markdown("""
-        <div style="margin-bottom:24px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                      font-weight:600;color:#4fdbc8;margin-bottom:4px;">
-            ⬡ ZenFlow
-          </div>
-          <div style="font-size:11px;color:#859490;">Productivity Intelligence</div>
-        </div>
         <hr style="border:none;border-top:1px solid #1e293b;margin-bottom:20px;">
         """, unsafe_allow_html=True)
 
@@ -574,7 +591,7 @@ def _render_sidebar(df: pd.DataFrame) -> FilterState:
             key="filter_status",
         )
 
-        st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">', 
+        st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">',
                     unsafe_allow_html=True)
 
         # Data source info
@@ -874,15 +891,42 @@ def render_dashboard() -> None:
     _render_global_css()
     _render_header()
 
-    # ── Data load (cached) ────────────────────────────────────────────────────
+    # ── Data Load Logic ────────────────────────────────────────────────────
+    # First, render app branding and uploader in sidebar to determine the source
+    with st.sidebar:
+        st.markdown("""
+        <div style="margin-bottom:24px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                      font-weight:600;color:#4fdbc8;margin-bottom:4px;">
+            ⬡ ZenFlow
+          </div>
+          <div style="font-size:11px;color:#859490;">Productivity Intelligence</div>
+        </div>
+        <hr style="border:none;border-top:1px solid #1e293b;margin-bottom:20px;">
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="section-header">CARGA de DATOS</div>', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader(
+            "Sube tus logs (CSV)",
+            type=["csv"],
+            help="Carga un archivo CSV que cumpla con el esquema de ZenFlow (Git, Jira, Todoist, etc.)",
+            key="file_uploader"
+        )
+
     try:
-        full_df = _load_data(str(_DATA_PATH))
+        if uploaded_file:
+            # Load uploaded file bytes
+            full_df = _load_uploaded_data(uploaded_file.getvalue())
+        else:
+            # Fallback to local sample
+            full_df = _load_local_data(_DATA_PATH)
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         st.error(f"**Error al cargar datos:** {exc}")
-        st.info(
-            "💡 Genera el dataset ejecutando: "
-            "`python scripts/generate_sample_data.py`"
-        )
+        if not uploaded_file:
+            st.info(
+                "💡 Genera el dataset ejecutando: "
+                "`python scripts/generate_sample_data.py`"
+            )
         st.stop()
 
     # ── Sidebar filters ───────────────────────────────────────────────────────
@@ -908,15 +952,15 @@ def render_dashboard() -> None:
 
     # ── Render sections ───────────────────────────────────────────────────────
     _render_kpi_header(filtered_df)
-    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
+    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">',
                 unsafe_allow_html=True)
 
     _render_temporal_analysis(filtered_df)
-    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
+    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">',
                 unsafe_allow_html=True)
 
     _render_breakdown_charts(filtered_df)
-    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">', 
+    st.markdown('<hr style="border:none;border-top:1px solid #1e293b;margin:32px 0;">',
                 unsafe_allow_html=True)
 
     # Panel de insights
