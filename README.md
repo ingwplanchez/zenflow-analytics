@@ -18,6 +18,7 @@ ZenFlow Analytics transforma logs de proyectos de software en inteligencia accio
 
 | Módulo | Descripción |
 |--------|-------------|
+| **Carga Dinámica** | Ingesta de archivos CSV personalizados vía `st.file_uploader` con validación de esquema |
 | **ETL Engine** | Ingesta, validación y normalización de CSV de logs con tipado estricto |
 | **KPI Dashboard** | Eficiencia global, velocidad, tasa de completado, índice de fatiga |
 | **Eficiencia por Día** | Distribución dual-eje: eficiencia (barras) + throughput (línea) × día semana |
@@ -36,6 +37,8 @@ zenflow-analytics/
 │   └── dashboard.py           # Layout Streamlit — desacoplado de datos
 ├── utils/
 │   └── helpers.py             # Tokens DESIGN.md, Plotly theme, formatters
+├── tests/
+│   └── test_data_processor.py  # Suite de pruebas unitarias para el motor ETL
 ├── data/
 │   └── sample_logs.csv        # Dataset sintético (~500 registros, 6 meses)
 ├── scripts/
@@ -58,11 +61,22 @@ pip install -r requirements.txt
 # 2. Generar dataset de ejemplo
 python scripts/generate_sample_data.py
 
-# 3. Lanzar aplicación
+# 3. Ejecutar suite de pruebas (Validación del Motor ETL)
+python -m pytest tests/test_data_processor.py
+
+# 4. Lanzar aplicación
 streamlit run app.py
 ```
 
 La aplicación estará disponible en `http://localhost:8501`.
+
+## Calidad y Pruebas
+
+El núcleo de procesamiento de datos (`core/data_processor.py`) está respaldado por una suite de pruebas unitarias implementada con `pytest` que garantiza:
+- **Integridad del Esquema**: Validación de columnas requeridas y coerción de tipos.
+- **Precisión de KPIs**: Verificación de cálculos de eficiencia y velocidad.
+- **Robustez**: Manejo de valores nulos, archivos vacíos y divisiones por cero.
+- **Detección de Patrones**: Validación de la lógica de detección de fatiga y cuellos de botella.
 
 ## Arquitectura
 

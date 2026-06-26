@@ -6,21 +6,21 @@
 - [x] Obtener aprobación del usuario
 
 ## Phase 2: Scaffolding
-- [/] `requirements.txt`
-- [ ] `.streamlit/config.toml`
-- [ ] `utils/__init__.py` + `utils/helpers.py`
-- [ ] `core/__init__.py` + `core/data_processor.py`
-- [ ] Script generador de datos + `data/sample_logs.csv`
+- [x] `requirements.txt`
+- [x] `.streamlit/config.toml`
+- [x] `utils/__init__.py` + `utils/helpers.py`
+- [x] `core/__init__.py` + `core/data_processor.py`
+- [x] Script generador de datos + `data/sample_logs.csv`
 
 ## Phase 3: UI
-- [ ] `ui/__init__.py` + `ui/dashboard.py`
-- [ ] `app.py`
+- [x] `ui/__init__.py` + `ui/dashboard.py`
+- [x] `app.py`
 
 ## Phase 4: Documentation
-- [ ] `AGENT.md`
-- [ ] `README.md` (actualizado)
+- [x] `AGENT.md`
+- [x] `README.md` (actualizado)
 
 ## Phase 5: Verification
-- [ ] `pip install -r requirements.txt`
-- [ ] Verificar imports
-- [ ] `streamlit run app.py`
+- [x] `pip install -r requirements.txt`
+- [x] Verificar imports
+- [x] `streamlit run app.py`
