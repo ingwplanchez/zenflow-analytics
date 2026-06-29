@@ -276,19 +276,19 @@ def _chart_weekday_efficiency(weekday_df: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=weekday_df["weekday"],
         y=weekday_df["throughput"].round(2),
-        name="Throughput (tasks/h)",
+        name="Rendimiento Promedio (t/h)",
         mode="lines+markers",
         yaxis="y2",
         line=dict(color=PALETTE["secondary"], width=2, dash="dot"),
         marker=dict(size=6, color=PALETTE["secondary"]),
-        hovertemplate="<b>%{x}</b><br>Throughput: %{y:.2f} t/h<extra></extra>",
+        hovertemplate="<b>%{x}</b><br>Rendimiento: %{y:.2f} t/h<extra></extra>",
     ))
 
     apply_plotly_theme(fig)
     fig.update_layout(
         yaxis=dict(title="Eficiencia (%)", ticksuffix="%",
                    gridcolor="rgba(60,73,71,0.3)"),
-        yaxis2=dict(title="Throughput (t/h)", overlaying="y", side="right",
+        yaxis2=dict(title="Rendimiento (t/h)", overlaying="y", side="right",
                     showgrid=False, tickfont=dict(color=PALETTE["secondary"])),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
         margin=dict(t=30, b=40),
@@ -626,7 +626,7 @@ def _render_kpi_header(df: pd.DataFrame) -> None:
 
     with c1:
         st.metric(
-            label="📊 Throughput Diario",
+            label="📊 Rendimiento Promedio Diario",
             value=f"{throughput:.1f} tareas/día",
             delta="Promedio completado por día activo",
             delta_color="off",
@@ -656,7 +656,7 @@ def _render_temporal_analysis(filtered_df: pd.DataFrame) -> None:
 
     with col_left:
         weekday_df = aggregate_by_weekday(filtered_df)
-        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Distribución de Eficiencia & Throughput por Día</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:14px; font-weight:600; margin-bottom:12px; color:#dae2fd;">Distribución de Eficiencia & Rendimiento por Día</div>', unsafe_allow_html=True)
         st.plotly_chart(
             _chart_weekday_efficiency(weekday_df),
             width='stretch',

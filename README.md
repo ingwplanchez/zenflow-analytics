@@ -27,6 +27,26 @@ ZenFlow Analytics transforma logs de proyectos de software en inteligencia accio
 | **Insights Automáticos** | Recomendaciones contextuales generadas desde los datos procesados |
 | **Filtros Reactivos** | Sidebar: fecha, proyecto, categoría, prioridad, estado |
 
+## Guía de Análisis de Métricas
+
+Para interpretar correctamente el Dashboard, ZenFlow utiliza los siguientes conceptos:
+
+### 📊 Distribución de Eficiencia & Rendimiento
+Combina la calidad de la planificación con la densidad del trabajo:
+- **Eficiencia (Barras)**: $\text{Real} / \text{Estimado}$. 
+    - $100\%$ = Estimación perfecta. 
+    - $>100\%$ = Subestimación o imprevistos (Overrun).
+    - $<100\%$ = Tarea finalizada antes de lo previsto.
+- **Rendimiento (Línea)**: $\text{Tareas} / \text{Horas Reales}$.
+    - **Alto**: Muchas tareas pequeñas cerradas (Día de limpieza de backlog).
+    - **Bajo**: Pocas tareas que requieren mucho tiempo (Día de *Deep Work*).
+
+### 🌡️ Mapa de Calor de Actividad
+Representa la densidad de inicio de tareas en una matriz de $24\text{h} \times 7\text{ días}$.
+- **Zonas Intensas**: Ventanas de máxima productividad y enfoque.
+- **Zonas Vacías**: Periodos de inactividad o descanso.
+- **Uso**: Ayuda a identificar el "ritmo circadiano" de productividad para programar las tareas más complejas en las horas de mayor densidad.
+
 ## Estructura del Repositorio
 
 ```

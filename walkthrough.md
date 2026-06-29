@@ -28,7 +28,12 @@ Los logs del servidor confirman que la aplicación se ejecuta con total estabili
 
 ---
 
-## Próximos Pasos Recomendados
-Una vez confirmada la estabilidad de la interfaz inicial y del motor ETL con el dataset de prueba de **520 registros**, puedes iniciar el desarrollo de las tareas prioritarias del backlog:
-1. Añadir el cargador de archivos dinámico en la UI sidebar (`st.file_uploader`).
-2. Diseñar e implementar pruebas de regresión / unitarias para el motor ETL en `core/data_processor.py`.
+## Tareas del Backlog Completadas
+
+Una vez confirmada la estabilidad de la interfaz inicial y del motor ETL, se han implementado las siguientes funcionalidades:
+- [x] Añadir el cargador de archivos dinámico en la UI sidebar (`st.file_uploader`).
+- [x] Diseñar e implementar pruebas de regresión / unitarias para el motor ETL en `core/data_processor.py`.
+
+## Próximos Pasos Sugeridos
+- Implementar soporte para la columna `module_task` en la tabla de tareas para mostrar la descripción detallada de cada actividad.
+- Explorar la integración de exportadores automáticos desde herramientas externas (Jira/GitHub).
